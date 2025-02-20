@@ -1,0 +1,19 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/commons/images
+/screenshots/
+/reports/
+/*.png
+tests/RECRegression/*.js-snapshots/
+/*_state.json
+allure-results/
+monocart-results/
+utils/temp.properties
+trace-undefined.zip
+force/
+utils/.env

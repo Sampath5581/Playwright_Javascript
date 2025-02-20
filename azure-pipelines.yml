@@ -1,0 +1,98 @@
+name: Playwright and Allure Automation
+trigger:
+  - main
+variables:
+  - group: Test_Automation
+jobs:
+  - job: All_Tests
+    timeoutInMinutes: 60
+    pool:
+      name: Global Pulse Agent
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "18.x"
+        displayName: "Install Node.js"
+      - script: |
+          echo "Removing existing dependencies..."
+          rm -rf node_modules package-lock.json
+          echo "Reinstalling all dependencies..."
+          npm install
+        displayName: "Clean and Reinstall Dependencies"
+      - script: |
+          npx playwright install
+        displayName: "Playwright Installation"
+      - script: |
+          echo "Installing Playwright dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y wget
+        displayName: "Install Playwright Dependencies"
+       - script: |
+          npm install
+        displayName: "Install Project Dependencies"
+      - script: |
+          npm install allure-commandline --save-dev
+        displayName: "Install Allure Commandline"
+      - script:  npm install allure-playwright
+        displayName: "Install Allure Playwright"
+      - script: |
+          pip install boto3 hvac
+          echo %ERRORLEVEL%
+        displayName: 'Install Python requirements' 
+      - script: |
+          python readSecrets.py
+        displayName: "Execute Python Function"
+      - script: |
+          echo "Captured secret user name value: $(aut_admin_uid)"
+          echo "Captured secret password value: $(aut_admin_pwd)"
+        displayName: "Use Captured Secret Values"
+      - script: |
+          xvfb-run npx playwright test CriticalDates.spec.js
+        displayName: "Run all test cases."
+        env:
+          aut_admin_uid: $(aut_admin_uid)
+          aut_admin_pwd: $(aut_admin_pwd)
+          # aut_arem_uid: $(aut_arem_uid)
+          # aut_arem_pwd: $(aut_arem_pwd)
+          # aut_assrem_uid: $(aut_assrem_uid)
+          # aut_assrem_pwd: $(aut_assrem_pwd)
+          # aut_rem_uid: $(aut_rem_uid)
+          # aut_ren_pwd: $(aut_ren_pwd)
+          # aut_srem_uid: $(aut_srem_uid)
+          # aut_srem_pwd: $(aut_srem_pwd)
+          # aut_gm_uid: $(aut_gm_uid)
+          # aut_gm_pwd: $(aut_gm_pwd)
+          # aut_assdir_uid: $(aut_assdir_uid)
+          # aut_assdir_pwd: $(aut_assdir_pwd)
+          # aut_dir_uid: $(aut_dir_uid)
+          # aut_dir_pwd: $(aut_dir_pwd)
+          # aut_mdir_uid: $(aut_mdir_uid)
+          # aut_mdir_pwd: $(aut_mdir_pwd)
+          browser: $(BROWSER)
+          REC_URL: $(REC_URL)
+          REC_LOGIN_URL: $(REC_LOGIN_URL)
+          REC_DASHBOARD_URL: $(REC_DASHBOARD_URL)
+          env: $(ENV)
+      - script: |
+          echo "Listing contents of reports directory..."
+          pwd
+          ls -la reports
+        displayName: "List Reports Directory"
+        condition: succeededOrFailed()
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: 'reports/Playwright_*.xml'
+        condition: succeededOrFailed()
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: 'test-results'
+          artifact: 'TestResults'
+          publishLocation: 'pipeline'
+        displayName: "Publish Test Results and Screenshots"
+        condition: succeededOrFailed()
+      - script: |
+          sudo chmod -R 777 node_modules
+          rm -rf node_modules
+        displayName: "Ensure Permissions and Clean Up"
+        condition: always()
